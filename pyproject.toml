@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "selfie-sorter"
-version = "1.0.0-dev.1"
+version = "1.0.0-dev.2"
 description = "Local selfie sorter that files images by explicit/suggestive labels using NudeNet + OpenNSFW2"
 authors = ["Taylor <t.blackstone@inspyre.tech>"]
 readme = "README.md"

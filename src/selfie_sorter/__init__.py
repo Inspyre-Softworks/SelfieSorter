@@ -1,26 +1,18 @@
 """
-Provides functionality for sorting and organizing selfie images based on configured criteria.
+Top-level package for selfie_sorter.
 
-This module imports and exposes the `SortConfig` class for configuration of sorting parameters
-and the `SelfieSorter` class for processing and organizing selfies. It is designed to streamline
-the management of large collections of selfies by automating the categorization process.
-
-Exported Classes:
-    - SortConfig:
-        Defines configuration settings for the sorting process.
-
-    - SelfieSorter:
-        Implements the selfie sorting logic.
-
-Constants:
-    __all__ (list):
-        Specifies the public API of the module.
-
-    __version__ (str):
-        Represents the version of the module.
+Note:
+    We intentionally do not re-export submodule classes (e.g.,
+    :class:`~selfie_sorter.config.SortConfig`) from the package root to avoid
+    duplicate documentation targets in Sphinx.
 """
-from .config import SortConfig
-from .sorter import SelfieSorter
 
-__all__ = ['SortConfig', 'SelfieSorter']
-__version__ = '1.0.0-dev.1'
+from __future__ import annotations
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
+
+try:
+    __version__ = _pkg_version('selfie_sorter')
+except PackageNotFoundError:
+    __version__ = '0.0.0'
+
+__all__ = ['__version__']
