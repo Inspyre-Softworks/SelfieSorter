@@ -1,5 +1,5 @@
 Quickstart
-=========
+==========
 
 Minimal example
 ---------------
