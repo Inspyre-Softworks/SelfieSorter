@@ -13,6 +13,15 @@ and sub-folders by detected label (e.g., `female_breast_exposed`) using:
 # with Poetry
 poetry install
 poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted"
+# or explicitly list files to process instead of scanning the input tree
+poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --files \
+  "/path/to/unsorted/a.jpg" \
+  "/path/to/unsorted/subdir/b.png"
+# add censored copies alongside the sorted files (pixelated by default)
+poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor-copies
+# pick a different censor style (blurred or a black box with a label)
+poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor-copies \
+  --censor-style blurred
 
 # OR without Poetry (you provide exiftool on your PATH):
 pip install pillow imagehash nudenet opennsfw2
@@ -24,3 +33,6 @@ python -m selfie_sorter.cli --in "/path/to/unsorted" --out "/path/to/sorted"
 - Rules are normalized to UPPERCASE_WITH_UNDERSCORES for robust matching.
 - Set `--no-coarse` to skip OpenNSFW2 gate.
 - Use `--dup-hamming` to tune near-duplicate sensitivity (default 5).
+- Enable `--censor-copies` to write censored siblings for sharing. Use `--censor-style` to choose between
+  `pixelated`, `blurred`, or `black-box`, adjust intensity with `--censor-strength`, and change the
+  overlay text (for `black-box`) via `--censor-label`.
