@@ -13,6 +13,10 @@ and sub-folders by detected label (e.g., `female_breast_exposed`) using:
 # with Poetry
 poetry install
 poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted"
+# or explicitly list files to process instead of scanning the input tree
+poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --files \
+  "/path/to/unsorted/a.jpg" \
+  "/path/to/unsorted/subdir/b.png"
 
 # OR without Poetry (you provide exiftool on your PATH):
 pip install pillow imagehash nudenet opennsfw2

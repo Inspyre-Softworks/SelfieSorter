@@ -9,7 +9,7 @@ metadata handling, and more.
 """
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 from .constants import EXPLICIT_RULES, SUGGESTIVE_RULES
 
@@ -72,6 +72,7 @@ class SortConfig:
     dir_safe: str = 'safe'
     dir_dupes: str = 'dupes'
     exiftool_cmd: str = 'exiftool'
+    input_files: Optional[Tuple[Path, ...]] = None
 
 
 __all__ = [

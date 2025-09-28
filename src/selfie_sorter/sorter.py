@@ -80,10 +80,17 @@ class SelfieSorter:
         Returns:
             None
         """
-        files: List[Path] = [
-            p for p in self.cfg.root_in.rglob('*')
-            if p.is_file() and p.suffix.lower() in self.IMAGE_EXTS
-        ]
+        if self.cfg.input_files:
+            files: List[Path] = []
+            for candidate in self.cfg.input_files:
+                path = Path(candidate)
+                if path.is_file() and path.suffix.lower() in self.IMAGE_EXTS:
+                    files.append(path)
+        else:
+            files = [
+                p for p in self.cfg.root_in.rglob('*')
+                if p.is_file() and p.suffix.lower() in self.IMAGE_EXTS
+            ]
         for path in files:
             try:
                 self._process_one(path)
