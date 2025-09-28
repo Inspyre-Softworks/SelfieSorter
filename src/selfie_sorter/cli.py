@@ -36,6 +36,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument('--in', dest='root_in', required=True, type=Path, help='Input directory')
     p.add_argument('--out', dest='root_out', required=True, type=Path, help='Output directory')
+    p.add_argument(
+        '--files',
+        dest='input_files',
+        type=Path,
+        nargs='+',
+        help='Optional explicit list of image files to process instead of scanning the input directory',
+    )
     p.add_argument('--no-coarse', action='store_true', help='Disable OpenNSFW2 gate')
     p.add_argument('--nsfw-threshold', type=float, default=0.80)
     p.add_argument('--keep-safe', action='store_true', help='Keep safe images in place (do not move)')
@@ -70,6 +77,7 @@ def main() -> None:
         move_safe=not a.keep_safe,
         strip_metadata=not a.no_exif_strip,
         dup_hamming=a.dup_hamming,
+        input_files=tuple(a.input_files) if a.input_files else None,
     )
     SelfieSorter(cfg).run()
 
