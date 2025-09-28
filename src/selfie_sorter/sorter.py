@@ -82,10 +82,14 @@ class SelfieSorter:
         """
         if self.cfg.input_files:
             files: List[Path] = []
+            seen: set = set()
             for candidate in self.cfg.input_files:
                 path = Path(candidate)
-                if path.is_file() and path.suffix.lower() in self.IMAGE_EXTS:
+                # Use absolute path for deduplication
+                abs_path = path.resolve()
+                if abs_path not in seen and path.is_file() and path.suffix.lower() in self.IMAGE_EXTS:
                     files.append(path)
+                    seen.add(abs_path)
         else:
             files = [
                 p for p in self.cfg.root_in.rglob('*')
