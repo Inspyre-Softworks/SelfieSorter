@@ -72,6 +72,7 @@ class SortConfig:
     censor_label:     str             = 'CENSORED'
     censored_suffix:  str             = '_censored'
     censored_root:    Path            = Path('censored')
+    show_progress:    bool            = True
 
     dir_explicit: str = 'explicit'
     dir_suggestive: str = 'suggestive'

@@ -19,6 +19,9 @@ import hashlib
 import logging
 from typing import Iterable, List, Optional, Set
 
+from yaspin import yaspin
+from tqdm import tqdm
+
 from .constants import IMAGE_EXTS
 from .config import SortConfig
 from .coarse import CoarseGate
@@ -101,14 +104,29 @@ class SelfieSorter:
         Returns:
             None
         """
-        files = self._gather_files()
-        for path in files:
+        with yaspin(text='Collecting files...', enabled=self.cfg.show_progress) as spinner:
+            files = self._gather_files()
+            if self.cfg.show_progress:
+                spinner.text = f'Collected {len(files)} file(s)'
+                spinner.ok('✅ ')
+
+        iterator = tqdm(
+            files,
+            desc='Sorting',
+            unit='file',
+            disable=not self.cfg.show_progress,
+        )
+        for path in iterator:
             try:
                 self._process_one(path)
             except KeyboardInterrupt:
+                if hasattr(iterator, 'close'):
+                    iterator.close()
                 raise
             except Exception:
                 continue
+        if hasattr(iterator, 'close'):
+            iterator.close()
 
     def _gather_files(self) -> List[Path]:
         """Collect supported files from explicit input or by scanning root_in."""

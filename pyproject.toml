@@ -12,6 +12,8 @@ pillow = "*"
 imagehash = "*"
 nudenet = "*"
 opennsfw2 = "*"
+tqdm = "*"
+yaspin = "*"
 
 [tool.poetry.scripts]
 selfie-sort = "selfie_sorter.cli:main"

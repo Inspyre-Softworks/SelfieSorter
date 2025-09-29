@@ -2,3 +2,5 @@ pillow
 imagehash
 nudenet
 opennsfw2
+tqdm
+yaspin

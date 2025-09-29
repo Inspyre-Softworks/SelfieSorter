@@ -22,6 +22,8 @@ poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor
 # store censored copies in a custom directory (relative paths resolve under --out)
 poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor-copies \
   --censor-dir shared_censors
+# disable the progress spinner/bar for minimal console output
+poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --no-progress
 # pick a different censor style (blurred or a black box with a label)
 poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor-copies \
   --censor-style blurred
@@ -45,4 +47,5 @@ python -m selfie_sorter.cli --in "/path/to/unsorted" --out "/path/to/sorted"
   `--censor-dir` to redirect the censored tree elsewhere (relative paths resolve under `--out`).
 - Run `--censor-existing /path/to/sorted` to read previously generated JSON sidecars, crop censorship to the
   recorded bounding boxes, and emit new copies suffixed with `_censored` (override with `--censor-suffix`). By default
-  the censored tree is written to `<root>/censored`; combine with `--censor-dir` to change the destination.
+  the censored tree is written to `<root>/censored`; combine with `--censor-dir` to change the destination. Long-running
+  operations display a spinner and progress bar powered by `yaspin`/`tqdm`; add `--no-progress` to opt out.

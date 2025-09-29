@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from tqdm import tqdm
+from yaspin import yaspin
 
 from .constants import IMAGE_EXTS
 
@@ -220,6 +222,7 @@ def censor_sorted_tree(
     suffix: str = '_censored',
     image_exts: Iterable[str] = IMAGE_EXTS,
     output_root: Optional[Path] = None,
+    show_progress: bool = True,
 ) -> List[Path]:
     """Generate censored copies for images that already have NudeNet metadata.
 
@@ -237,6 +240,9 @@ def censor_sorted_tree(
         Optional directory where censored copies are written. When omitted the
         copies are placed under ``root / 'censored'`` while preserving the
         original folder structure beneath ``root``.
+    show_progress:
+        When ``True`` (default) display a spinner while scanning and a progress
+        bar as files are censored. Disable for quiet environments.
     """
 
     root = Path(root)
@@ -254,9 +260,23 @@ def censor_sorted_tree(
     created: List[Path] = []
     normalized_exts = {ext.lower() for ext in image_exts}
 
-    for image_path in sorted(root.rglob('*')):
-        if image_path.suffix.lower() not in normalized_exts:
-            continue
+    with yaspin(text='Scanning sorted tree...', enabled=show_progress) as spinner:
+        image_paths = [
+            path
+            for path in sorted(root.rglob('*'))
+            if path.suffix.lower() in normalized_exts
+        ]
+        if show_progress:
+            spinner.text = f'Found {len(image_paths)} image file(s)'
+            spinner.ok('✅ ')
+
+    progress = tqdm(
+        image_paths,
+        desc='Censoring',
+        unit='file',
+        disable=not show_progress,
+    )
+    for image_path in progress:
 
         sidecar = image_path.with_suffix(image_path.suffix + '.json')
         if not sidecar.exists():
@@ -291,6 +311,9 @@ def censor_sorted_tree(
             continue
 
         created.append(destination)
+
+    if hasattr(progress, 'close'):
+        progress.close()
 
     return created
 

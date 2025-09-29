@@ -50,6 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--dup-hamming', type=int, default=5)
     p.add_argument('--censor-copies', action='store_true', help='Write a censored copy beside each moved file')
     p.add_argument(
+        '--no-progress',
+        action='store_true',
+        help='Disable the spinner and progress bar for batch operations',
+    )
+    p.add_argument(
         '--censor-style',
         choices=['pixelated', 'blurred', 'black-box'],
         default='pixelated',
@@ -118,6 +123,7 @@ def main() -> None:
             censor=censor,
             suffix=a.censor_suffix,
             output_root=output_root,
+            show_progress=not a.no_progress,
         )
         if not created:
             print('No censored files were generated.')
@@ -142,6 +148,7 @@ def main() -> None:
         censor_strength=a.censor_strength,
         censor_label=a.censor_label,
         censored_suffix=a.censor_suffix,
+        show_progress=not a.no_progress,
     )
     if a.censor_dir is not None:
         cfg_kwargs['censored_root'] = a.censor_dir
