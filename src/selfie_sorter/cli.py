@@ -34,8 +34,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog='selfie-sort',
         description='Local selfie sorter using NudeNet + OpenNSFW2'
     )
-    p.add_argument('--in', dest='root_in', required=True, type=Path, help='Input directory')
-    p.add_argument('--out', dest='root_out', required=True, type=Path, help='Output directory')
+    p.add_argument('--in', dest='root_in', type=Path, help='Input directory')
+    p.add_argument('--out', dest='root_out', type=Path, help='Output directory')
     p.add_argument(
         '--files',
         dest='input_files',
@@ -66,6 +66,16 @@ def build_parser() -> argparse.ArgumentParser:
         default='CENSORED',
         help='Text drawn inside black-box censor copies (ignored for other styles)',
     )
+    p.add_argument(
+        '--censor-suffix',
+        default='_censored',
+        help='Suffix appended to generated censor copies',
+    )
+    p.add_argument(
+        '--censor-existing',
+        type=Path,
+        help='Create censored copies for an already-sorted tree that includes JSON sidecars',
+    )
     return p
 
 
@@ -87,6 +97,28 @@ def main() -> None:
     """
     p = build_parser()
     a = p.parse_args()
+    if a.censor_existing:
+        from .censor import ImageCensor, censor_sorted_tree
+
+        censor = ImageCensor(
+            style=a.censor_style.replace('-', '_'),
+            strength=a.censor_strength,
+            label=a.censor_label,
+        )
+        created = censor_sorted_tree(
+            a.censor_existing,
+            censor=censor,
+            suffix=a.censor_suffix,
+        )
+        if not created:
+            print('No censored files were generated.')
+        else:
+            print(f'Generated {len(created)} censored file(s).')
+        return
+
+    if not a.root_in or not a.root_out:
+        p.error('--in and --out are required unless --censor-existing is supplied')
+
     cfg = SortConfig(
         root_in=a.root_in,
         root_out=a.root_out,
@@ -100,6 +132,7 @@ def main() -> None:
         censor_style=a.censor_style.replace('-', '_'),
         censor_strength=a.censor_strength,
         censor_label=a.censor_label,
+        censored_suffix=a.censor_suffix,
     )
     SelfieSorter(cfg).run()
 

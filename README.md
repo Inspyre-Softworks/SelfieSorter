@@ -22,6 +22,9 @@ poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor
 # pick a different censor style (blurred or a black box with a label)
 poetry run selfie-sort --in "/path/to/unsorted" --out "/path/to/sorted" --censor-copies \
   --censor-style blurred
+# retroactively generate censored copies from an already-sorted tree
+poetry run selfie-sort --censor-existing "/path/to/sorted" --censor-style black-box \
+  --censor-label "CENSORED" --censor-strength 32
 
 # OR without Poetry (you provide exiftool on your PATH):
 pip install pillow imagehash nudenet opennsfw2
@@ -35,4 +38,6 @@ python -m selfie_sorter.cli --in "/path/to/unsorted" --out "/path/to/sorted"
 - Use `--dup-hamming` to tune near-duplicate sensitivity (default 5).
 - Enable `--censor-copies` to write censored siblings for sharing. Use `--censor-style` to choose between
   `pixelated`, `blurred`, or `black-box`, adjust intensity with `--censor-strength`, and change the
-  overlay text (for `black-box`) via `--censor-label`.
+  overlay text (for `black-box`) via `--censor-label` (supports `{label}` placeholder for the detection label).
+- Run `--censor-existing /path/to/sorted` to read previously generated JSON sidecars, crop censorship to the
+  recorded bounding boxes, and emit new copies suffixed with `_censored` (override with `--censor-suffix`).
