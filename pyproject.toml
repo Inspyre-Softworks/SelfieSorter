@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "selfie-sorter"
-version = "1.0.0-dev.2"
+version = "1.0.0-dev.3"
 description = "Local selfie sorter that files images by explicit/suggestive labels using NudeNet + OpenNSFW2"
 authors = ["Taylor <t.blackstone@inspyre.tech>"]
 readme = "README.md"
@@ -30,4 +30,9 @@ docs = [
     "sphinx-copybutton (>=0.5.2,<0.6.0)",
     "sphinx-design (>=0.6.1,<0.7.0)",
     "myst-parser (>=4.0.1,<5.0.0)"
+]
+dev = [
+    "ipython (>=9.5.0,<10.0.0)",
+    "prompt-toolkit (>=3.0.52,<4.0.0)",
+    "ptipython (>=1.0.1,<2.0.0)"
 ]
