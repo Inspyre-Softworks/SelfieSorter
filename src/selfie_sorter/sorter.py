@@ -16,7 +16,11 @@ from pathlib import Path
 import json
 import shutil
 import hashlib
-from typing import List
+import logging
+from typing import Iterable, List, Optional, Set
+
+from yaspin import yaspin
+from tqdm import tqdm
 
 from .constants import IMAGE_EXTS
 from .config import SortConfig
@@ -25,6 +29,10 @@ from .detector import FineDetector
 from .router import TagRouter
 from .dedupe import Deduper
 from .metadata import MetadataCleaner
+from .censor import ImageCensor
+
+
+logger = logging.getLogger(__name__)
 
 
 class SelfieSorter:
@@ -53,6 +61,22 @@ class SelfieSorter:
         self.router = TagRouter(cfg)
         self.dedupe = Deduper(cfg)
         self.cleaner = MetadataCleaner(cfg)
+        self.censor = (
+            ImageCensor(
+                style=cfg.censor_style,
+                strength=cfg.censor_strength,
+                label=cfg.censor_label,
+            )
+            if cfg.write_censored
+            else None
+        )
+        self.censored_root: Optional[Path] = None
+        if cfg.write_censored:
+            root = cfg.censored_root
+            if not root.is_absolute():
+                root = cfg.root_out / root
+            self.censored_root = root
+            self.censored_root.mkdir(parents=True, exist_ok=True)
 
         for d in [cfg.dir_explicit, cfg.dir_suggestive, cfg.dir_safe, cfg.dir_dupes]:
             (cfg.root_out / d).mkdir(parents=True, exist_ok=True)
@@ -80,17 +104,75 @@ class SelfieSorter:
         Returns:
             None
         """
-        files: List[Path] = [
-            p for p in self.cfg.root_in.rglob('*')
-            if p.is_file() and p.suffix.lower() in self.IMAGE_EXTS
-        ]
-        for path in files:
+        with yaspin(text='Collecting files...', enabled=self.cfg.show_progress) as spinner:
+            files = self._gather_files()
+            if self.cfg.show_progress:
+                spinner.text = f'Collected {len(files)} file(s)'
+                spinner.ok('✅ ')
+
+        iterator = tqdm(
+            files,
+            desc='Sorting',
+            unit='file',
+            disable=not self.cfg.show_progress,
+        )
+        for path in iterator:
             try:
                 self._process_one(path)
             except KeyboardInterrupt:
+                if hasattr(iterator, 'close'):
+                    iterator.close()
                 raise
             except Exception:
                 continue
+        if hasattr(iterator, 'close'):
+            iterator.close()
+
+    def _gather_files(self) -> List[Path]:
+        """Collect supported files from explicit input or by scanning root_in."""
+        if self.cfg.input_files:
+            files = self._filter_supported_files(self.cfg.input_files, dedupe=True, log_skips=True)
+        else:
+            files = self._filter_supported_files(self.cfg.root_in.rglob('*'))
+        return sorted(files, key=lambda p: str(p).lower())
+
+    def _filter_supported_files(
+        self,
+        candidates: Iterable[Path],
+        *,
+        dedupe: bool = False,
+        log_skips: bool = False,
+    ) -> List[Path]:
+        files: List[Path] = []
+        seen: Set[Path] = set()
+        for candidate in candidates:
+            path = Path(candidate)
+            resolved = path
+            try:
+                resolved = path.resolve()
+            except (FileNotFoundError, RuntimeError):
+                resolved = path
+
+            if dedupe and resolved in seen:
+                continue
+
+            if not path.exists():
+                if log_skips:
+                    logger.warning('Skipping %s: file does not exist', path)
+                continue
+            if not path.is_file():
+                if log_skips:
+                    logger.warning('Skipping %s: not a file', path)
+                continue
+            if path.suffix.lower() not in self.IMAGE_EXTS:
+                if log_skips:
+                    logger.warning('Skipping %s: unsupported extension', path)
+                continue
+
+            if dedupe:
+                seen.add(resolved)
+            files.append(path)
+        return files
 
     def _process_one(self, path: Path) -> None:
         """
@@ -138,6 +220,22 @@ class SelfieSorter:
 
         dest_path = self._unique_dest(dest_dir / path.name)
         shutil.move(str(path), dest_path)
+
+        if self.cfg.write_censored and self.censor and self.censored_root:
+            try:
+                relative_parent = dest_path.parent.relative_to(self.cfg.root_out)
+            except ValueError:  # pragma: no cover - unexpected
+                relative_parent = Path()
+            censored_dir = self.censored_root / relative_parent
+            censored_dir.mkdir(parents=True, exist_ok=True)
+            censored_base = censored_dir / (
+                f"{dest_path.stem}{self.cfg.censored_suffix}{dest_path.suffix}"
+            )
+            censored_path = self._unique_dest(censored_base)
+            try:
+                self.censor.create_copy(dest_path, censored_path)
+            except Exception:  # pragma: no cover - defensive
+                logger.warning('Failed to create censored copy for %s', dest_path, exc_info=True)
 
         if self.cfg.write_sidecar:
             meta = {

@@ -34,13 +34,58 @@ def build_parser() -> argparse.ArgumentParser:
         prog='selfie-sort',
         description='Local selfie sorter using NudeNet + OpenNSFW2'
     )
-    p.add_argument('--in', dest='root_in', required=True, type=Path, help='Input directory')
-    p.add_argument('--out', dest='root_out', required=True, type=Path, help='Output directory')
+    p.add_argument('--in', dest='root_in', type=Path, help='Input directory')
+    p.add_argument('--out', dest='root_out', type=Path, help='Output directory')
+    p.add_argument(
+        '--files',
+        dest='input_files',
+        type=Path,
+        nargs='+',
+        help='Optional explicit list of image files to process instead of scanning the input directory',
+    )
     p.add_argument('--no-coarse', action='store_true', help='Disable OpenNSFW2 gate')
     p.add_argument('--nsfw-threshold', type=float, default=0.80)
     p.add_argument('--keep-safe', action='store_true', help='Keep safe images in place (do not move)')
     p.add_argument('--no-exif-strip', action='store_true', help='Do not remove metadata')
     p.add_argument('--dup-hamming', type=int, default=5)
+    p.add_argument('--censor-copies', action='store_true', help='Write a censored copy beside each moved file')
+    p.add_argument(
+        '--no-progress',
+        action='store_true',
+        help='Disable the spinner and progress bar for batch operations',
+    )
+    p.add_argument(
+        '--censor-style',
+        choices=['pixelated', 'blurred', 'black-box'],
+        default='pixelated',
+        help='Censoring style to apply to generated copies',
+    )
+    p.add_argument(
+        '--censor-strength',
+        type=int,
+        default=12,
+        help='Intensity of the censoring effect (block size, blur radius, or box height)',
+    )
+    p.add_argument(
+        '--censor-label',
+        default='CENSORED',
+        help='Text drawn inside black-box censor copies (ignored for other styles)',
+    )
+    p.add_argument(
+        '--censor-suffix',
+        default='_censored',
+        help='Suffix appended to generated censor copies',
+    )
+    p.add_argument(
+        '--censor-dir',
+        type=Path,
+        help='Directory root for censored copies (default: <out>/censored or <root>/censored)',
+    )
+    p.add_argument(
+        '--censor-existing',
+        type=Path,
+        help='Create censored copies for an already-sorted tree that includes JSON sidecars',
+    )
     return p
 
 
@@ -62,7 +107,34 @@ def main() -> None:
     """
     p = build_parser()
     a = p.parse_args()
-    cfg = SortConfig(
+    if a.censor_existing:
+        from .censor import ImageCensor, censor_sorted_tree
+
+        censor = ImageCensor(
+            style=a.censor_style.replace('-', '_'),
+            strength=a.censor_strength,
+            label=a.censor_label,
+        )
+        output_root = a.censor_dir
+        if output_root and not output_root.is_absolute():
+            output_root = a.censor_existing / output_root
+        created = censor_sorted_tree(
+            a.censor_existing,
+            censor=censor,
+            suffix=a.censor_suffix,
+            output_root=output_root,
+            show_progress=not a.no_progress,
+        )
+        if not created:
+            print('No censored files were generated.')
+        else:
+            print(f'Generated {len(created)} censored file(s).')
+        return
+
+    if not a.root_in or not a.root_out:
+        p.error('--in and --out are required unless --censor-existing is supplied')
+
+    cfg_kwargs = dict(
         root_in=a.root_in,
         root_out=a.root_out,
         use_coarse_gate=not a.no_coarse,
@@ -70,7 +142,17 @@ def main() -> None:
         move_safe=not a.keep_safe,
         strip_metadata=not a.no_exif_strip,
         dup_hamming=a.dup_hamming,
+        input_files=tuple(a.input_files) if a.input_files else None,
+        write_censored=a.censor_copies,
+        censor_style=a.censor_style.replace('-', '_'),
+        censor_strength=a.censor_strength,
+        censor_label=a.censor_label,
+        censored_suffix=a.censor_suffix,
+        show_progress=not a.no_progress,
     )
+    if a.censor_dir is not None:
+        cfg_kwargs['censored_root'] = a.censor_dir
+    cfg = SortConfig(**cfg_kwargs)
     SelfieSorter(cfg).run()
 
 if __name__ == '__main__':
