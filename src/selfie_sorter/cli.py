@@ -72,6 +72,11 @@ def build_parser() -> argparse.ArgumentParser:
         help='Suffix appended to generated censor copies',
     )
     p.add_argument(
+        '--censor-dir',
+        type=Path,
+        help='Directory root for censored copies (default: <out>/censored or <root>/censored)',
+    )
+    p.add_argument(
         '--censor-existing',
         type=Path,
         help='Create censored copies for an already-sorted tree that includes JSON sidecars',
@@ -105,10 +110,14 @@ def main() -> None:
             strength=a.censor_strength,
             label=a.censor_label,
         )
+        output_root = a.censor_dir
+        if output_root and not output_root.is_absolute():
+            output_root = a.censor_existing / output_root
         created = censor_sorted_tree(
             a.censor_existing,
             censor=censor,
             suffix=a.censor_suffix,
+            output_root=output_root,
         )
         if not created:
             print('No censored files were generated.')
@@ -119,7 +128,7 @@ def main() -> None:
     if not a.root_in or not a.root_out:
         p.error('--in and --out are required unless --censor-existing is supplied')
 
-    cfg = SortConfig(
+    cfg_kwargs = dict(
         root_in=a.root_in,
         root_out=a.root_out,
         use_coarse_gate=not a.no_coarse,
@@ -134,6 +143,9 @@ def main() -> None:
         censor_label=a.censor_label,
         censored_suffix=a.censor_suffix,
     )
+    if a.censor_dir is not None:
+        cfg_kwargs['censored_root'] = a.censor_dir
+    cfg = SortConfig(**cfg_kwargs)
     SelfieSorter(cfg).run()
 
 if __name__ == '__main__':

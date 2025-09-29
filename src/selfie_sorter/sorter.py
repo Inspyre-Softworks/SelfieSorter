@@ -17,7 +17,7 @@ import json
 import shutil
 import hashlib
 import logging
-from typing import Iterable, List, Set
+from typing import Iterable, List, Optional, Set
 
 from .constants import IMAGE_EXTS
 from .config import SortConfig
@@ -67,6 +67,13 @@ class SelfieSorter:
             if cfg.write_censored
             else None
         )
+        self.censored_root: Optional[Path] = None
+        if cfg.write_censored:
+            root = cfg.censored_root
+            if not root.is_absolute():
+                root = cfg.root_out / root
+            self.censored_root = root
+            self.censored_root.mkdir(parents=True, exist_ok=True)
 
         for d in [cfg.dir_explicit, cfg.dir_suggestive, cfg.dir_safe, cfg.dir_dupes]:
             (cfg.root_out / d).mkdir(parents=True, exist_ok=True)
@@ -196,8 +203,14 @@ class SelfieSorter:
         dest_path = self._unique_dest(dest_dir / path.name)
         shutil.move(str(path), dest_path)
 
-        if self.cfg.write_censored and self.censor:
-            censored_base = dest_path.with_name(
+        if self.cfg.write_censored and self.censor and self.censored_root:
+            try:
+                relative_parent = dest_path.parent.relative_to(self.cfg.root_out)
+            except ValueError:  # pragma: no cover - unexpected
+                relative_parent = Path()
+            censored_dir = self.censored_root / relative_parent
+            censored_dir.mkdir(parents=True, exist_ok=True)
+            censored_base = censored_dir / (
                 f"{dest_path.stem}{self.cfg.censored_suffix}{dest_path.suffix}"
             )
             censored_path = self._unique_dest(censored_base)

@@ -219,6 +219,7 @@ def censor_sorted_tree(
     censor: ImageCensor,
     suffix: str = '_censored',
     image_exts: Iterable[str] = IMAGE_EXTS,
+    output_root: Optional[Path] = None,
 ) -> List[Path]:
     """Generate censored copies for images that already have NudeNet metadata.
 
@@ -232,11 +233,23 @@ def censor_sorted_tree(
         Suffix appended to the generated filenames.
     image_exts:
         Iterable of supported image extensions.
+    output_root:
+        Optional directory where censored copies are written. When omitted the
+        copies are placed under ``root / 'censored'`` while preserving the
+        original folder structure beneath ``root``.
     """
 
     root = Path(root)
     if not root.is_dir():
         raise ValueError(f'Not a directory: {root!s}')
+
+    if output_root is None:
+        resolved_output = root / 'censored'
+    else:
+        resolved_output = Path(output_root)
+        if not resolved_output.is_absolute():
+            resolved_output = root / resolved_output
+    resolved_output.mkdir(parents=True, exist_ok=True)
 
     created: List[Path] = []
     normalized_exts = {ext.lower() for ext in image_exts}
@@ -262,8 +275,14 @@ def censor_sorted_tree(
             logger.info('Skipping %s: no detections recorded', image_path)
             continue
 
+        try:
+            relative_parent = image_path.parent.relative_to(root)
+        except ValueError:  # pragma: no cover - unexpected
+            relative_parent = Path()
+        destination_dir = resolved_output / relative_parent
+        destination_dir.mkdir(parents=True, exist_ok=True)
         destination = _unique_destination(
-            image_path.with_name(f'{image_path.stem}{suffix}{image_path.suffix}')
+            destination_dir / f'{image_path.stem}{suffix}{image_path.suffix}'
         )
         try:
             censor.create_copy(image_path, destination, detections=detections)

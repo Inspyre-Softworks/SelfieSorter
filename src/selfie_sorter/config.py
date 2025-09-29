@@ -71,6 +71,7 @@ class SortConfig:
     censor_strength:  int             = 12
     censor_label:     str             = 'CENSORED'
     censored_suffix:  str             = '_censored'
+    censored_root:    Path            = Path('censored')
 
     dir_explicit: str = 'explicit'
     dir_suggestive: str = 'suggestive'
